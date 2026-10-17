@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#5c49e8"><link rel="manifest" href="./manifest.json">
+<title>Boss Is Coming! — Comedy Office Game</title>
+<style>
+:root{--ink:#24213d;--purple:#5c49e8;--yellow:#ffe45c;--pink:#ff6e9f;--blue:#68d5ff;--paper:#fffaf0}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#241d53;font-family:system-ui,-apple-system,Segoe UI,sans-serif;touch-action:none}canvas{display:block;width:100vw;height:100dvh}
+.hud{position:fixed;inset:0;color:white;pointer-events:none}.top{position:absolute;left:12px;right:12px;top:max(12px,env(safe-area-inset-top));display:flex;align-items:center;justify-content:space-between;gap:7px}.pill{background:#241d53d9;border:2px solid #ffffff3b;border-radius:14px;padding:8px 11px;font-size:12px;font-weight:900;box-shadow:0 3px 0 #171238;white-space:nowrap}.top button{pointer-events:auto;border:2px solid #ffffff55;border-radius:14px;background:#241d53;color:#fff;font-weight:900;padding:9px 11px}.meter{position:absolute;left:14px;right:14px;top:65px;height:12px;background:#17123888;border:2px solid #ffffff50;border-radius:99px;overflow:hidden}.meter span{display:block;height:100%;width:100%;background:linear-gradient(90deg,#63e6b0,#ffe45c,#ff6e9f);transition:width .1s}
+.controls{position:absolute;bottom:max(18px,env(safe-area-inset-bottom));left:14px;right:14px;display:flex;align-items:end;justify-content:space-between;gap:10px}.control{pointer-events:auto;border:3px solid #ffffffbb;background:#fffaf0;color:#30285f;box-shadow:0 6px 0 #b8b0df;border-radius:20px;font-weight:1000;font-size:22px;width:64px;height:62px}.action{pointer-events:auto;border:3px solid #fff;background:#ffe45c;color:#3c2d71;box-shadow:0 6px 0 #d5ad30;border-radius:20px;font-weight:1000;font-size:12px;letter-spacing:.3px;min-width:98px;height:62px;padding:0 10px}.actions{display:flex;gap:8px}.overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;background:#171238b8;backdrop-filter:blur(6px);color:var(--ink);z-index:5}.hidden{display:none!important}.panel{width:min(100%,390px);padding:26px 22px;text-align:center;border:4px solid white;border-radius:28px;background:var(--paper);box-shadow:0 9px 0 #29205c,0 20px 60px #100a3d77}.emoji{font-size:48px}.panel h1{font-size:28px;line-height:1.05;margin:8px 0;color:#392b82}.panel p{font-size:14px;line-height:1.6;color:#554c79}.primary{width:100%;border:0;border-radius:16px;background:#ff6e9f;color:#351c4e;font-weight:1000;padding:15px;box-shadow:0 5px 0 #c93f76;letter-spacing:.6px}.secondary{width:100%;border:2px solid #c9c2ed;border-radius:16px;background:#fff;color:#392b82;font-weight:900;padding:12px;margin-top:10px}.small{font-size:11px!important;opacity:.8}.toast{position:fixed;top:100px;left:50%;transform:translateX(-50%);padding:10px 15px;background:#ffe45c;border:3px solid white;color:#30285f;border-radius:99px;font-weight:1000;opacity:0;transition:opacity .15s;z-index:4;pointer-events:none}.toast.show{opacity:1}
+@media(min-width:700px){.control{width:72px;height:68px}.action{height:68px;min-width:110px}.pill{font-size:14px;padding:10px 14px}}
+</style></head><body>
+<canvas id="game"></canvas>
+<div class="hud"><div class="top"><div class="pill">🏢 BOSS IS COMING!</div><div class="pill">LEVEL <span id="level">1</span>/5</div><div class="pill">⭐ <span id="score">0</span></div><button id="sound" aria-label="Toggle sound">🔊</button><button id="pause">Ⅱ</button></div><div class="meter"><span id="meter"></span></div>
+<div class="controls"><div><button class="control" id="left">◀</button> <button class="control" id="right">▶</button></div><div class="actions"><button class="action" id="work">💻 LOOK BUSY</button><button class="action" id="sneak">🤫 SNEAK</button></div></div></div>
+<div class="toast" id="toast">+10 PRODUCTIVITY!</div>
+<div class="overlay" id="start"><div class="panel"><div class="emoji">😎💻</div><h1>BOSS IS<br>COMING!</h1><p>Your job: look busy before the boss catches you slacking. Finish each level's fake-work target, hide your fun, and survive the office chaos!</p><button class="primary" id="startBtn">START WORKDAY ▶</button><p class="small">MOVE: ◀ ▶ OR A/D · LOOK BUSY: WORK · SNEAK: 🤫<br>Desktop: arrows/A-D, W or Space to work, Shift to sneak.</p></div></div>
+<div class="overlay hidden" id="pauseScreen"><div class="panel"><div class="emoji">☕</div><h1>COFFEE BREAK</h1><p>Score: <b id="pauseScore">0</b></p><button class="primary" id="resume">BACK TO WORK</button></div></div>
+<div class="overlay hidden" id="levelScreen"><div class="panel"><div class="emoji">🎉📈</div><h1>LEVEL CLEARED!</h1><p id="levelMessage">The boss is impressed. Suspiciously impressed.</p><button class="primary" id="next">NEXT LEVEL ▶</button></div></div>
+<div class="overlay hidden" id="over"><div class="panel"><div class="emoji" id="overEmoji">😱</div><h1 id="overTitle">CAUGHT!</h1><p id="overText">Your boss saw the memes.</p><p>Score: <b id="final">0</b> · Best: <b id="bestFinal">0</b></p><button class="primary" id="again">TRY AGAIN ↻</button><button class="secondary" id="restartAll">RESTART FROM LEVEL 1</button></div></div>
+<script>
+(()=>{const c=document.querySelector('canvas'),ctx=c.getContext('2d'),$=id=>document.getElementById(id);let W,H,D=1,active=false,paused=false,last=0,elapsed=0,score=0,best=+(localStorage.bossComingBest||0),level=1,player,desk=[],papers=[],particles=[],keys={left:false,right:false},bossX=-100,bossAlert=0,workProgress=0,workHeld=false,sneakHeld=false,levelTime=35,toastTimer=0,soundOn=true,audio=null,frameId=0;
+const levelNames=['Monday: The Meme Incident','Tuesday: Spreadsheet Panic','Wednesday: Snack Emergency','Thursday: Meeting Escape','Friday: Final Boss'];
+$('score').textContent=score;
+function resize(){D=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;c.width=W*D;c.height=H*D;ctx.setTransform(D,0,0,D,0,0);if(!active)draw()}addEventListener('resize',resize);
+function tone(freq=440,dur=.08,type='sine'){if(!soundOn)return;try{audio=audio||new(window.AudioContext||window.webkitAudioContext)();let o=audio.createOscillator(),g=audio.createGain();o.type=type;o.frequency.value=freq;g.gain.value=.06;g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+dur);o.connect(g);g.connect(audio.destination);o.start();o.stop(audio.currentTime+dur)}catch(e){}}
+function toast(t){$('toast').textContent=t;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),650)}
+function resetLevel(){elapsed=0;levelTime=35+level*2;workProgress=0;bossX=-80;bossAlert=0;player={x:W*.25,y:H*.69,w:34,h:54,face:1,walking:0,panic:0};desk=[];papers=[];particles=[];for(let i=0;i<6;i++)desk.push({x:i*W/4+(i%2)*35,y:H*.73+(i%3)*8,w:70+(i%2)*18,h:22,color:['#ffb84d','#6edbff','#a88bff'][i%3]});$('level').textContent=level;$('meter').style.width='100%';}
+function roundRect(x,y,w,h,r,fill,stroke){ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fillStyle=fill;ctx.fill();if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=3;ctx.stroke()}}
+function text(t,x,y,size,color,align='left'){ctx.fillStyle=color;ctx.font=`900 ${size}px system-ui`;ctx.textAlign=align;ctx.fillText(t,x,y)}
+function drawOffice(){let g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#80d9ff');g.addColorStop(.55,'#c5f4ff');g.addColorStop(.56,'#ffdd9a');g.addColorStop(1,'#ffb6c8');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+ // office windows
+ for(let i=0;i<4;i++){let x=i*W/3.5+18;roundRect(x,H*.13,W*.19,H*.25,12,'#6aa9ed','#fff');ctx.strokeStyle='#fff';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(x+W*.095,H*.13);ctx.lineTo(x+W*.095,H*.38);ctx.moveTo(x,H*.255);ctx.lineTo(x+W*.19,H*.255);ctx.stroke();ctx.fillStyle='#65bd92';ctx.fillRect(x+8,H*.31,W*.19-16,H*.06)}
+ // floor and wall trim
+ ctx.fillStyle='#ffd7e1';ctx.fillRect(0,H*.57,W,H*.08);ctx.fillStyle='#c77caa';ctx.fillRect(0,H*.64,W,H*.018);ctx.fillStyle='#d99b68';ctx.fillRect(0,H*.78,W,H*.22);
+ for(let x=0;x<W;x+=65){ctx.strokeStyle='#c17e68';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x,H*.79);ctx.lineTo(x-18,H);ctx.stroke()}
+ // cute plant
+ roundRect(W*.86,H*.48,20,52,7,'#f6a0b9');ctx.strokeStyle='#35b978';ctx.lineWidth=7;ctx.beginPath();ctx.moveTo(W*.87,H*.5);ctx.lineTo(W*.85,H*.42);ctx.moveTo(W*.87,H*.5);ctx.lineTo(W*.9,H*.4);ctx.stroke();ctx.fillStyle='#35b978';ctx.beginPath();ctx.ellipse(W*.84,H*.42,13,6,-.5,0,7);ctx.ellipse(W*.91,H*.4,13,6,.5,0,7);ctx.fill()}
+function drawDesk(d){roundRect(d.x,d.y,d.w,d.h,7,d.color,'#fff');roundRect(d.x+7,d.y-20,d.w*.53,21,4,'#fff','#5c49e8');ctx.fillStyle='#5c49e8';ctx.fillRect(d.x+12,d.y-14,d.w*.35,3);ctx.fillStyle='#4b3a7d';ctx.fillRect(d.x+10,d.y+d.h,6,34);ctx.fillRect(d.x+d.w-16,d.y+d.h,6,34);roundRect(d.x+d.w*.58,d.y-14,22,14,3,'#30285f');ctx.fillStyle='#fff';ctx.fillRect(d.x+d.w*.61,d.y-10,16,2)}
+function drawPlayer(){let x=player.x,y=player.y,walk=Math.sin(elapsed*14)*4*(Math.abs(player.walking)>0?1:0);ctx.save();ctx.translate(x+player.w/2,y+player.h/2);if(player.face<0)ctx.scale(-1,1);
+ // legs
+ ctx.strokeStyle='#493a78';ctx.lineWidth=8;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(-7,14);ctx.lineTo(-10+walk,26);ctx.moveTo(7,14);ctx.lineTo(10-walk,26);ctx.stroke();
+ // body and shirt
+ roundRect(-14,-8,28,28,9,workHeld?'#4fc7a5':'#ff6e9f','#fff');
+ // head
+ ctx.fillStyle='#ffcf9f';ctx.beginPath();ctx.arc(0,-20,15,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
+ // hair
+ ctx.fillStyle='#51365f';ctx.beginPath();ctx.arc(0,-25,15,Math.PI,Math.PI*2);ctx.lineTo(14,-20);ctx.lineTo(7,-24);ctx.lineTo(0,-19);ctx.lineTo(-14,-20);ctx.fill();
+ // eyes
+ ctx.fillStyle='#30285f';ctx.beginPath();ctx.arc(-5,-20,2,0,7);ctx.arc(5,-20,2,0,7);ctx.fill();
+ ctx.strokeStyle='#a34861';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,-15,4,.1,Math.PI-.1);ctx.stroke();
+ // tie
+ poly([[-3,-7],[3,-7],[5,4],[0,9],[-5,4]],'#ffe45c');
+ if(sneakHeld){ctx.fillStyle='#fff';ctx.font='20px system-ui';ctx.fillText('🤫',14,-28)}
+ if(workHeld){ctx.fillStyle='#fff';ctx.font='20px system-ui';ctx.fillText('💻',14,-28)}
+ ctx.restore()}
+function poly(a,col){ctx.beginPath();a.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.closePath();ctx.fillStyle=col;ctx.fill()}
+function drawBoss(){if(bossX<-120)return;let x=bossX,y=H*.44+Math.sin(elapsed*5)*4;ctx.save();ctx.translate(x,y); // boss silhouette
+ roundRect(-26,-3,52,72,13,'#514077','#fff');roundRect(-32,-44,64,49,18,'#ffcf9f','#fff');ctx.fillStyle='#392b5c';ctx.beginPath();ctx.arc(0,-44,31,Math.PI,Math.PI*2);ctx.fill();ctx.fillRect(-30,-44,60,10);ctx.fillStyle='#30285f';ctx.beginPath();ctx.arc(-10,-22,3,0,7);ctx.arc(10,-22,3,0,7);ctx.fill();ctx.strokeStyle='#c93f76';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(-9,-8);ctx.lineTo(9,-8);ctx.stroke();roundRect(-37,8,74,24,8,'#fff','#5c49e8');text('BOSS',0,25,13,'#5c49e8','center');ctx.fillStyle='#ffcf9f';ctx.fillRect(-34,12,8,32);ctx.fillRect(26,12,8,32);ctx.restore()}
+function draw(){drawOffice();desk.forEach(drawDesk); // poster
+ roundRect(W*.39,H*.15,W*.22,H*.1,10,'#fff','#5c49e8');text('YOU GOT THIS!',W*.5,H*.19,Math.max(11,W*.017),'#ff6e9f','center');text('WORK HARD • NAP SMART',W*.5,H*.225,Math.max(8,W*.011),'#5c49e8','center');
+ // floating productivity stars
+ particles.forEach(p=>{ctx.globalAlpha=Math.max(0,p.life);text(p.t,p.x,p.y,18,p.color,'center');ctx.globalAlpha=1});
+ drawPlayer();drawBoss();if(active&&!paused){text(workHeld?'LOOKING BUSY!':sneakHeld?'SNEAK MODE':'DON’T GET CAUGHT',W/2,H*.09,Math.max(13,W*.025),'#392b82','center')}
+}
+function burst(x,y){for(let i=0;i<6;i++)particles.push({x:x+(Math.random()-.5)*40,y:y-Math.random()*25,life:1,t:['⭐','✨','📄'][i%3],color:'#fff'})}
+function clearLevel(){active=false;tone(660,.15);$('levelMessage').textContent=level===5?'You survived the whole week! HR is impressed. Somehow.':'You survived '+levelNames[level-1]+'. The boss is suspiciously impressed.';$('levelScreen').classList.remove('hidden')}
+function gameOver(caught){active=false;best=Math.max(best,score);localStorage.bossComingBest=best;$('overEmoji').textContent=caught?'😱':'🫠';$('overTitle').textContent=caught?'CAUGHT BY THE BOSS!':'WORKDAY OVER!';$('overText').textContent=caught?'The boss caught you slacking. Your meme tab is now Exhibit A.':'You ran out of time before finishing your fake work.';$('final').textContent=score;$('bestFinal').textContent=best;$('over').classList.remove('hidden');tone(120,.3,'sawtooth')}
+function frame(now){if(!active||paused)return;let dt=Math.min((now-last)/1000,.04);last=now;elapsed+=dt;levelTime-=dt;let move=(keys.right?1:0)-(keys.left?1:0);player.x+=move*230*dt;player.x=Math.max(20,Math.min(W-player.w-20,player.x));player.face=move||player.face;player.walking=move;
+ // Boss approaches more quickly when you are not working; sneak slows the approach
+ let busy=workHeld?1:0,stealth=sneakHeld?1:0;let approach=busy?-4:stealth?10:23;bossX+=approach*dt*(1+level*.14);if(bossAlert>0)bossAlert-=dt;
+ if(workHeld){workProgress+=dt*(1+level*.12);if(Math.floor(workProgress*2)!==Math.floor((workProgress-dt)*2)){score+=1;$('score').textContent=score}if(workProgress>=3+level*.35){workProgress=0;score+=20;$('score').textContent=score;burst(player.x,player.y);toast('📊 +20 WORK POINTS!');tone(700,.07)}}
+ if(bossX>player.x-18){gameOver(true);return}
+ if(levelTime<=0){if(workProgress>1.4){score+=30;$('score').textContent=score;clearLevel()}else gameOver(false);return}
+ $('meter').style.width=Math.max(0,levelTime/(35+level*2)*100)+'%';
+ particles.forEach(p=>p.life-=dt*.9);particles=particles.filter(p=>p.life>0);draw();frameId=requestAnimationFrame(frame)}
+function startGame(){level=1;score=0;$('score').textContent=score;startLevel()}
+function startLevel(){resetLevel();active=true;paused=false;$('start').classList.add('hidden');$('over').classList.add('hidden');$('levelScreen').classList.add('hidden');$('pauseScreen').classList.add('hidden');last=performance.now();draw();frameId=requestAnimationFrame(frame)}
+function bindHold(id,prop){const b=$(id);b.addEventListener('pointerdown',e=>{e.preventDefault();keys[prop]=true;b.setPointerCapture?.(e.pointerId)});['pointerup','pointercancel','lostpointercapture'].forEach(ev=>b.addEventListener(ev,()=>keys[prop]=false))}
+bindHold('left','left');bindHold('right','right');
+function holdAction(id,prop){const b=$(id);b.addEventListener('pointerdown',e=>{e.preventDefault();window[prop]=true;b.setPointerCapture?.(e.pointerId)});['pointerup','pointercancel','lostpointercapture'].forEach(ev=>b.addEventListener(ev,()=>window[prop]=false))}
+holdAction('work','bossWork');holdAction('sneak','bossSneak');
+Object.defineProperty(window,'bossWork',{get:()=>workHeld,set:v=>workHeld=v});Object.defineProperty(window,'bossSneak',{get:()=>sneakHeld,set:v=>sneakHeld=v});
+$('startBtn').onclick=startGame;$('again').onclick=startGame;$('restartAll').onclick=startGame;
+$('next').onclick=()=>{if(level>=5){level=1;score+=100;toast('🏆 WEEK COMPLETE! +100');$('levelScreen').classList.add('hidden');startLevel()}else{level++;startLevel()}};
+$('pause').onclick=()=>{if(!active)return;paused=true;$('pauseScore').textContent=score;$('pauseScreen').classList.remove('hidden')};$('resume').onclick=()=>{paused=false;$('pauseScreen').classList.add('hidden');last=performance.now();frameId=requestAnimationFrame(frame)};
+$('sound').onclick=()=>{soundOn=!soundOn;$('sound').textContent=soundOn?'🔊':'🔇';if(soundOn)tone(520,.06)};
+addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight','Space'].includes(e.code))e.preventDefault();if(e.code==='ArrowLeft'||e.code==='KeyA')keys.left=true;if(e.code==='ArrowRight'||e.code==='KeyD')keys.right=true;if(e.code==='KeyW'||e.code==='Space'||e.code==='ArrowUp')workHeld=true;if(e.code==='ShiftLeft'||e.code==='ShiftRight')sneakHeld=true;if(e.code==='Escape'&&active)$('pause').click()});
+addEventListener('keyup',e=>{if(e.code==='ArrowLeft'||e.code==='KeyA')keys.left=false;if(e.code==='ArrowRight'||e.code==='KeyD')keys.right=false;if(e.code==='KeyW'||e.code==='Space'||e.code==='ArrowUp')workHeld=false;if(e.code==='ShiftLeft'||e.code==='ShiftRight')sneakHeld=false});
+resize();resetLevel();draw();if('serviceWorker'in navigator&&location.protocol.startsWith('http'))addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+})();
+</script></body></html>
